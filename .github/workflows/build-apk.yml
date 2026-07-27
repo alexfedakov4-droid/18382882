@@ -38,16 +38,15 @@ jobs:
       - name: Ensure rapt
         run: |
           [ -d SDK/rapt ] || git clone --depth 1 https://github.com/renpy/rapt.git SDK/rapt
-      - name: Inject + patches + fix Python 3 compatibility
+      - name: Inject + patches + Python 3 fixes
         run: |
           cp android.json SDK/launcher/android.json
           bash patch.sh SDK/launcher
           pip install --upgrade jinja2
-          # Fix raw_input -> input for Python 3
+          # Fix Python 3 compatibility in rapt
           sed -i 's/raw_input/input/g' SDK/rapt/buildlib/rapt/interface.py
-          # Fix urllib for Python 3
-          sed -i "s/^import urllib$/import urllib.request/g" SDK/rapt/buildlib/rapt/interface.py
-          echo "Patched interface.py for Python 3"
+          sed -i 's/^import urllib$/import urllib.request as urllib/g' SDK/rapt/buildlib/rapt/interface.py
+          echo "Patched interface.py"
       - name: rapt installsdk
         run: |
           cd SDK
