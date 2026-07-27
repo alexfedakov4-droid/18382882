@@ -1,0 +1,20 @@
+{
+  "package": "org.renpy.studio",
+  "name": "Ren'Py Studio",
+  "numeric_version": 1,
+  "version": "1.0",
+  "orientation": "sensor",
+  "icon_name": "Ren'Py Studio",
+  "include_pil": false,
+  "include_sqlite": false,
+  "install_market": false,
+  "update_always": false,
+  "update_icons": true,
+  "update_keystores": true,
+  "update_metadata": true,
+  "source": false,
+  "heap_size": "1",
+  "google_play_key": null,
+  "google_play_salt": null,
+  "permissions": ["INTERNET","VIBRATE","READ_EXTERNAL_STORAGE","WRITE_EXTERNAL_STORAGE","MANAGE_EXTERNAL_STORAGE"]
+}

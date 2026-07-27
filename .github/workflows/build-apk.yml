@@ -1,0 +1,45 @@
+name: build-apk
+on:
+  push: { branches: [main] }
+  workflow_dispatch:
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    env:
+      RENPY_VER: "8.5.3.26051504"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - name: Download official SDK
+        run: |
+          set -e
+          U1="https://github.com/renpy/renpy/releases/download/${RENPY_VER}/renpy-${RENPY_VER}-sdk.tar.bz2"
+          U2="https://www.renpy.org/dl/${RENPY_VER}/renpy-${RENPY_VER}-sdk.tar.bz2"
+          wget -q "$U1" -O sdk.tar.bz2 || wget -q "$U2" -O sdk.tar.bz2
+          TOP=$(tar tf sdk.tar.bz2 | head -1 | cut -d/ -f1)
+          tar xf sdk.tar.bz2 && mv "$TOP" SDK && ls SDK
+      - name: Ensure rapt
+        run: |
+          [ -d SDK/rapt ] || git clone --depth1 https://github.com/renpy/rapt.git SDK/rapt
+          ls SDK/rapt | head
+      - name: Inject android.json + patches
+        run: |
+          cp android.json SDK/launcher/android.json
+          bash patch.sh SDK/launcher
+      - name: rapt installsdk
+        run: |
+          cd SDK
+          yes | ./renpy.sh rapt installsdk || ./renpy.sh rapt installsdk
+      - name: Build launcher DEBUG apk
+        run: |
+          cd SDK
+          ./renpy.sh rapt build launcher debug
+      - name: Collect apk
+        run: |
+          cd SDK && mkdir -p out
+          find . -name '*.apk' -print -exec cp {} out/ \;
+      - uses: actions/upload-artifact@v4
+        with:
+          name: launcher-apk
+          path: SDK/out/*.apk
