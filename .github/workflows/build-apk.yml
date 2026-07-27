@@ -38,10 +38,11 @@ jobs:
       - name: Ensure rapt
         run: |
           [ -d SDK/rapt ] || git clone --depth 1 https://github.com/renpy/rapt.git SDK/rapt
-      - name: Inject + patches
+      - name: Inject + patches + update jinja2
         run: |
           cp android.json SDK/launcher/android.json
           bash patch.sh SDK/launcher
+          pip install --upgrade jinja2
       - name: rapt installsdk
         run: |
           cd SDK
