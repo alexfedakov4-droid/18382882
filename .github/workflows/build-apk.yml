@@ -14,15 +14,17 @@ jobs:
         with: { distribution: temurin, java-version: '17' }
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
-      - name: SDL2 runtime libs
+      - name: SDL2 dev libs
         run: |
           sudo apt-get update
-          sudo apt-get install -y libsdl2-2.0-0 libsdl2-image-2.0-0 libsdl2-mixer-2.0-0 libsdl2-ttf-2.0-0
-      - name: pip pygame_sdl2 (prebuilt wheel)
+          sudo apt-get install -y libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev libfreetype-dev libjpeg-dev libpng-dev cython3
+      - name: Build pygame_sdl2 from source
         run: |
-          python -m pip install --upgrade pip
-          pip install pygame_sdl2
-          python -c "import pygame_sdl2; print('pygame_sdl2 OK', pygame_sdl2.__file__)"
+          cd ~
+          git clone --depth 1 https://github.com/renpy/pygame_sdl2.git
+          cd pygame_sdl2
+          pip install . --no-build-isolation
+          python -c "import pygame_sdl2; print('pygame_sdl2 BUILD OK')"
       - name: Download official SDK
         run: |
           set -e
@@ -39,11 +41,6 @@ jobs:
         run: |
           cp android.json SDK/launcher/android.json
           bash patch.sh SDK/launcher
-      - name: Verify rapt imports (system python)
-        run: |
-          cd SDK
-          export PYTHONPATH="$(pwd)/rapt/buildlib"
-          ( cd rapt && python -c "import pygame_sdl2, rapt.interface, rapt.install_sdk; print('ALL IMPORTS OK')" )
       - name: rapt installsdk
         run: |
           cd SDK
