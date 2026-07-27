@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
-        with: { distribution: temurin, java-version: '17' }
+        with: { distribution: 'temurin', java-version: '8' }
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
       - name: SDL2 dev libs
@@ -46,11 +46,13 @@ jobs:
       - name: rapt installsdk
         run: |
           cd SDK
+          export JAVA_HOME=$JAVA_HOME_8_X64
           export PYTHONPATH="$(pwd)/rapt/buildlib"
           ( cd rapt && yes | python android.py installsdk )
       - name: Build launcher DEBUG apk
         run: |
           cd SDK
+          export JAVA_HOME=$JAVA_HOME_8_X64
           export PYTHONPATH="$(pwd)/rapt/buildlib"
           ( cd rapt && python android.py build launcher debug )
       - name: Collect apk
