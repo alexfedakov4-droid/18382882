@@ -18,28 +18,33 @@ jobs:
           F="renpy-${RENPY_SHORT}-sdk.tar.bz2"
           U1="https://github.com/renpy/renpy/releases/download/${RENPY_TAG}/${F}"
           U2="https://www.renpy.org/dl/${RENPY_SHORT}/${F}"
-          echo "trying $U1"
-          wget -q "$U1" -O sdk.tar.bz2 || { echo "trying $U2"; wget -q "$U2" -O sdk.tar.bz2; }
-          ls -lh sdk.tar.bz2
+          wget -q "$U1" -O sdk.tar.bz2 || wget -q "$U2" -O sdk.tar.bz2
           TOP=$(tar tf sdk.tar.bz2 | head -1 | cut -d/ -f1)
-          echo "top dir = $TOP"
-          tar xf sdk.tar.bz2 && mv "$TOP" SDK && ls SDK
+          tar xf sdk.tar.bz2 && mv "$TOP" SDK
       - name: Ensure rapt
         run: |
           [ -d SDK/rapt ] || git clone --depth 1 https://github.com/renpy/rapt.git SDK/rapt
-          ls SDK/rapt | head
       - name: Inject android.json + patches
         run: |
           cp android.json SDK/launcher/android.json
           bash patch.sh SDK/launcher
-      - name: rapt installsdk
+      - name: Locate rapt entry + installsdk
         run: |
           cd SDK
-          yes | python3 rapt/build.py installsdk
+          echo "=== SDK root ==="; ls
+          echo "=== SDK/rapt ==="; ls rapt
+          ENTRY=$(ls rapt/android.py rapt/build.py rapt/rapt.py rapt/main.py 2>/dev/null | head -1)
+          if [ -z "$ENTRY" ]; then
+            echo "NO ENTRY FOUND, all py in rapt root:"; find rapt -maxdepth 1 -name '*.py'; exit 1
+          fi
+          echo "ENTRY = $ENTRY"
+          yes | python3 "$ENTRY" installsdk || python3 "$ENTRY" installsdk
       - name: Build launcher DEBUG apk
         run: |
           cd SDK
-          python3 rapt/build.py build launcher debug
+          ENTRY=$(ls rapt/android.py rapt/build.py rapt/rapt.py rapt/main.py 2>/dev/null | head -1)
+          echo "ENTRY = $ENTRY"
+          python3 "$ENTRY" build launcher debug
       - name: Collect apk
         run: |
           cd SDK && mkdir -p out
