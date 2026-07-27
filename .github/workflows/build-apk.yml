@@ -38,16 +38,6 @@ jobs:
       - name: Ensure rapt
         run: |
           [ -d SDK/rapt ] || git clone --depth 1 https://github.com/renpy/rapt.git SDK/rapt
-      - name: Setup Android environment
-        run: |
-          export ANDROID_HOME=$HOME/android-sdk
-          mkdir -p $ANDROID_HOME/licenses
-          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_HOME/licenses/android-sdk-license
-          echo "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_HOME/licenses/android-sdk-preview-license
-          echo "d975f751698a77b662f1254ddbeed3901e973869" > $ANDROID_HOME/licenses/intel-android-extra-license
-          echo "504667f4c0de7af1a06de9f4b1727b84351f2910" > $ANDROID_HOME/licenses/google-gdk-license
-          echo "licenses created at $ANDROID_HOME"
-          ls -la $ANDROID_HOME/licenses/
       - name: Inject + patches + Python 3 fixes
         run: |
           cp android.json SDK/launcher/android.json
@@ -56,17 +46,24 @@ jobs:
           sed -i 's/raw_input/input/g' SDK/rapt/buildlib/rapt/interface.py
           sed -i 's/^import urllib$/import urllib.request as urllib/g' SDK/rapt/buildlib/rapt/interface.py
           echo "Patched interface.py"
-      - name: rapt installsdk
+      - name: rapt installsdk (with licenses)
         run: |
           cd SDK
-          export ANDROID_HOME=$HOME/android-sdk
           export JAVA_HOME=$JAVA_HOME_8_X64
           export PYTHONPATH="$(pwd)/rapt/buildlib"
+          export ANDROID_HOME=$(pwd)/android-sdk
+          # Create licenses BEFORE running rapt
+          mkdir -p $ANDROID_HOME/licenses
+          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_HOME/licenses/android-sdk-license
+          echo "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_HOME/licenses/android-sdk-preview-license
+          echo "d975f751698a77b662f1254ddbeed3901e973869" > $ANDROID_HOME/licenses/intel-android-extra-license
+          ls -la $ANDROID_HOME/licenses/
+          # Run rapt
           ( cd rapt && yes | python android.py installsdk )
       - name: Build launcher DEBUG apk
         run: |
           cd SDK
-          export ANDROID_HOME=$HOME/android-sdk
+          export ANDROID_HOME=$(pwd)/android-sdk
           export JAVA_HOME=$JAVA_HOME_8_X64
           export PYTHONPATH="$(pwd)/rapt/buildlib"
           ( cd rapt && python android.py build launcher debug )
