@@ -28,23 +28,28 @@ jobs:
         run: |
           cp android.json SDK/launcher/android.json
           bash patch.sh SDK/launcher
-      - name: Locate rapt entry + installsdk
+      - name: Probe pygame_sdl2 + set PYTHONPATH
         run: |
           cd SDK
-          echo "=== SDK root ==="; ls
-          echo "=== SDK/rapt ==="; ls rapt
-          ENTRY=$(ls rapt/android.py rapt/build.py rapt/rapt.py rapt/main.py 2>/dev/null | head -1)
-          if [ -z "$ENTRY" ]; then
-            echo "NO ENTRY FOUND, all py in rapt root:"; find rapt -maxdepth 1 -name '*.py'; exit 1
-          fi
-          echo "ENTRY = $ENTRY"
-          yes | python3 "$ENTRY" installsdk || python3 "$ENTRY" installsdk
+          echo "=== python ==="; python3 --version
+          echo "=== lib (2 levels) ==="; find lib -maxdepth 2 2>/dev/null | head -60
+          echo "=== find pygame_sdl2 ==="; find . -maxdepth 5 -name 'pygame_sdl2*' | head
+          PGD=$(find . -maxdepth 5 \( -name 'pygame_sdl2' -type d -o -name 'pygame_sdl2*.so' \) | head -1)
+          PGDIR=$(dirname "$PGD")
+          echo "PGDIR=$PGDIR"
+          FULL="$PGDIR:$PWD/lib:$PWD:$PWD/rapt"
+          echo "PYTHONPATH=$FULL" >> $GITHUB_ENV
+          export PYTHONPATH="$FULL"
+          python3 -c "import pygame_sdl2; print('OK', pygame_sdl2.__file__)" || echo "IMPORT FAILED (see facts above)"
+      - name: rapt installsdk
+        run: |
+          cd SDK
+          echo "PYTHONPATH=$PYTHONPATH"
+          yes | python3 rapt/android.py installsdk || python3 rapt/android.py installsdk
       - name: Build launcher DEBUG apk
         run: |
           cd SDK
-          ENTRY=$(ls rapt/android.py rapt/build.py rapt/rapt.py rapt/main.py 2>/dev/null | head -1)
-          echo "ENTRY = $ENTRY"
-          python3 "$ENTRY" build launcher debug
+          python3 rapt/android.py build launcher debug
       - name: Collect apk
         run: |
           cd SDK && mkdir -p out
