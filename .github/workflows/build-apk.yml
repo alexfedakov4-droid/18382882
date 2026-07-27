@@ -43,20 +43,30 @@ jobs:
           cp android.json SDK/launcher/android.json
           bash patch.sh SDK/launcher
           pip install --upgrade jinja2
-          # Fix Python 3 compatibility in rapt
           sed -i 's/raw_input/input/g' SDK/rapt/buildlib/rapt/interface.py
           sed -i 's/^import urllib$/import urllib.request as urllib/g' SDK/rapt/buildlib/rapt/interface.py
           echo "Patched interface.py"
+      - name: Accept Android licenses
+        run: |
+          cd SDK
+          export ANDROID_HOME=$(pwd)/android-sdk
+          export JAVA_HOME=$JAVA_HOME_8_X64
+          mkdir -p $ANDROID_HOME/licenses
+          echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_HOME/licenses/android-sdk-license
+          echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_HOME/licenses/android-sdk-preview-license
+          echo "Licenses accepted"
       - name: rapt installsdk
         run: |
           cd SDK
           export JAVA_HOME=$JAVA_HOME_8_X64
+          export ANDROID_HOME=$(pwd)/android-sdk
           export PYTHONPATH="$(pwd)/rapt/buildlib"
           ( cd rapt && yes | python android.py installsdk )
       - name: Build launcher DEBUG apk
         run: |
           cd SDK
           export JAVA_HOME=$JAVA_HOME_8_X64
+          export ANDROID_HOME=$(pwd)/android-sdk
           export PYTHONPATH="$(pwd)/rapt/buildlib"
           ( cd rapt && python android.py build launcher debug )
       - name: Collect apk
