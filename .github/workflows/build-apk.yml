@@ -28,28 +28,30 @@ jobs:
         run: |
           cp android.json SDK/launcher/android.json
           bash patch.sh SDK/launcher
-      - name: Facts about embedded python
+      - name: rapt installsdk (CWD=rapt, embedded python)
         run: |
+          set +e
           cd SDK
-          echo "=== ls lib/py3-linux-x86_64 ==="; ls -la lib/py3-linux-x86_64 | head -60
-          echo "=== pygame_sdl2 in linux dir ==="; find lib/py3-linux-x86_64 -name 'pygame_sdl2*' | head
-          echo "=== head android.py ==="; sed -n '1,20p' rapt/android.py
-          echo "=== renpy.sh ==="; cat renpy.sh
-          true
-      - name: rapt installsdk (embedded python)
-        run: |
-          cd SDK
-          chmod +x lib/py3-linux-x86_64/python 2>/dev/null || true
-          export LD_LIBRARY_PATH="$PWD/lib/py3-linux-x86_64"
-          export PYTHONPATH="$PWD:$PWD/lib/py3-linux-x86_64:$PWD/lib/python3.12"
-          PY=lib/py3-linux-x86_64/python
-          yes | $PY rapt/android.py installsdk || $PY rapt/android.py installsdk
+          LIB=$(pwd)/lib/py3-linux-x86_64
+          chmod +x "$LIB/python"
+          export LD_LIBRARY_PATH="$LIB"
+          echo "=== rapt/buildlib ==="; ls rapt/buildlib | head -60
+          echo "=== pygame_sdl2 in buildlib? ==="; ls -d rapt/buildlib/pygame_sdl2* 2>/dev/null || echo "NOT in buildlib"
+          echo "=== ATTEMPT 1: CWD=rapt ==="
+          ( cd rapt && yes | "$LIB/python" android.py installsdk ); RC1=$?
+          echo "RC1=$RC1"
+          if [ $RC1 -ne 0 ]; then
+            echo "=== ATTEMPT 2: CWD=SDK + PYTHONPATH=rapt/buildlib ==="
+            PYTHONPATH="$(pwd)/rapt/buildlib" yes | "$LIB/python" rapt/android.py installsdk; RC2=$?
+            echo "RC2=$RC2"
+            [ $RC2 -ne 0 ] && exit 1
+          fi
       - name: Build launcher DEBUG apk
         run: |
           cd SDK
-          export LD_LIBRARY_PATH="$PWD/lib/py3-linux-x86_64"
-          export PYTHONPATH="$PWD:$PWD/lib/py3-linux-x86_64:$PWD/lib/python3.12"
-          lib/py3-linux-x86_64/python rapt/android.py build launcher debug
+          LIB=$(pwd)/lib/py3-linux-x86_64
+          export LD_LIBRARY_PATH="$LIB"
+          ( cd rapt && "$LIB/python" android.py build launcher debug )
       - name: Collect apk
         run: |
           cd SDK && mkdir -p out
