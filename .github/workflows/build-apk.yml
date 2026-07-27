@@ -24,27 +24,30 @@ jobs:
       - name: Ensure rapt
         run: |
           [ -d SDK/rapt ] || git clone --depth 1 https://github.com/renpy/rapt.git SDK/rapt
-      - name: Inject android.json + patches
+      - name: Inject + patches (guard desktop-only imports)
         run: |
           cp android.json SDK/launcher/android.json
           bash patch.sh SDK/launcher
-      - name: Probe pygame_sdl2 + set PYTHONPATH
+          # guard pygame_sdl2 import in rapt so installsdk can run without it
+          python - SDK/rapt/android.py <<'PY'
+          import sys,re
+          p=sys.argv[1]; c=open(p).read()
+          c=re.sub(r'(?m)^(\s*)import pygame_sdl2\s*$',
+                   r'\1try: import pygame_sdl2\n\1except Exception: pass', c)
+          open(p,'w').write(c); print("guarded pygame_sdl2 in rapt/android.py")
+          PY
+      - name: Inspect SDK layout (facts)
         run: |
           cd SDK
-          echo "=== python ==="; python3 --version
-          echo "=== lib (2 levels) ==="; find lib -maxdepth 2 2>/dev/null | head -60
-          echo "=== find pygame_sdl2 ==="; find . -maxdepth 5 -name 'pygame_sdl2*' | head
-          PGD=$(find . -maxdepth 5 \( -name 'pygame_sdl2' -type d -o -name 'pygame_sdl2*.so' \) | head -1)
-          PGDIR=$(dirname "$PGD")
-          echo "PGDIR=$PGDIR"
-          FULL="$PGDIR:$PWD/lib:$PWD:$PWD/rapt"
-          echo "PYTHONPATH=$FULL" >> $GITHUB_ENV
-          export PYTHONPATH="$FULL"
-          python3 -c "import pygame_sdl2; print('OK', pygame_sdl2.__file__)" || echo "IMPORT FAILED (see facts above)"
+          echo "=== python ver ==="; python3 --version
+          echo "=== ls lib ==="; ls -la lib 2>/dev/null
+          echo "=== find pygame_sdl2 (any) ==="; find . -name 'pygame_sdl2*' | head -40
+          echo "=== find python bins in lib ==="; find lib -name 'python*' -type f | head -40
+          echo "=== lib tree 3 levels ==="; find lib -maxdepth 3 | head -120
+          true
       - name: rapt installsdk
         run: |
           cd SDK
-          echo "PYTHONPATH=$PYTHONPATH"
           yes | python3 rapt/android.py installsdk || python3 rapt/android.py installsdk
       - name: Build launcher DEBUG apk
         run: |
