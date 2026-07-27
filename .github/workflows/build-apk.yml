@@ -12,10 +12,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '17' }
-      - name: Build deps for pygame_sdl2
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y python3-dev libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev libfreetype-dev libjpeg-dev libpng-dev cython3 virtualenv
       - name: Download official SDK
         run: |
           set -e
@@ -28,31 +24,38 @@ jobs:
       - name: Ensure rapt
         run: |
           [ -d SDK/rapt ] || git clone --depth 1 https://github.com/renpy/rapt.git SDK/rapt
-      - name: Build host platform files (pygame_sdl2)
-        run: |
-          cd SDK
-          echo "=== after_checkout.sh exists? ==="; ls -la after_checkout.sh 2>/dev/null || echo "NO after_checkout.sh"
-          if [ -x after_checkout.sh ] || [ -f after_checkout.sh ]; then
-            bash after_checkout.sh . 2>&1 | tail -40 || echo "after_checkout failed (see above)"
-          fi
-          echo "=== pygame_sdl2 now? ==="; find . -name 'pygame_sdl2*' | grep -v '\.sh' | head
-      - name: Inject + patches
+      - name: Inject + patches + guard pygame_sdl2 in rapt
         run: |
           cp android.json SDK/launcher/android.json
           bash patch.sh SDK/launcher
-      - name: rapt installsdk
+          python - SDK/rapt/android.py <<'PY'
+          import sys,re
+          p=sys.argv[1]; c=open(p).read()
+          c=re.sub(r'(?m)^(\s*)import pygame_sdl2\s*$',
+                   r'\1try: import pygame_sdl2\n\1except Exception: pass', c)
+          open(p,'w').write(c); print("guarded pygame_sdl2")
+          PY
+      - name: Verify rapt imports (fast, no download)
         run: |
           cd SDK
           LIB=$(pwd)/lib/py3-linux-x86_64
           chmod +x "$LIB/python" 2>/dev/null || true
           export LD_LIBRARY_PATH="$LIB"
-          ( cd rapt && yes | "$LIB/python" android.py installsdk ) || \
-          ( PYTHONPATH="$(pwd)/lib/py3-linux-x86_64:$(pwd)/lib/python3.12" yes | "$LIB/python" rapt/android.py installsdk )
+          export PYTHONPATH="$(pwd)/rapt/buildlib"
+          ( cd rapt && "$LIB/python" -c "import rapt.interface, rapt.install_sdk; print('RAPT IMPORTS OK')" )
+      - name: rapt installsdk
+        run: |
+          cd SDK
+          LIB=$(pwd)/lib/py3-linux-x86_64
+          export LD_LIBRARY_PATH="$LIB"
+          export PYTHONPATH="$(pwd)/rapt/buildlib"
+          ( cd rapt && yes | "$LIB/python" android.py installsdk )
       - name: Build launcher DEBUG apk
         run: |
           cd SDK
           LIB=$(pwd)/lib/py3-linux-x86_64
           export LD_LIBRARY_PATH="$LIB"
+          export PYTHONPATH="$(pwd)/rapt/buildlib"
           ( cd rapt && "$LIB/python" android.py build launcher debug )
       - name: Collect apk
         run: |
