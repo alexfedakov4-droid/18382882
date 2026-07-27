@@ -35,11 +35,11 @@ jobs:
       - name: rapt installsdk
         run: |
           cd SDK
-          yes | ./renpy.sh rapt installsdk || ./renpy.sh rapt installsdk
+          yes | python3 rapt/build.py installsdk
       - name: Build launcher DEBUG apk
         run: |
           cd SDK
-          ./renpy.sh rapt build launcher debug
+          python3 rapt/build.py build launcher debug
       - name: Collect apk
         run: |
           cd SDK && mkdir -p out
