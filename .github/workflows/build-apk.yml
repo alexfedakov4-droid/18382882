@@ -24,35 +24,32 @@ jobs:
       - name: Ensure rapt
         run: |
           [ -d SDK/rapt ] || git clone --depth 1 https://github.com/renpy/rapt.git SDK/rapt
-      - name: Inject + patches (guard desktop-only imports)
+      - name: Inject + patches
         run: |
           cp android.json SDK/launcher/android.json
           bash patch.sh SDK/launcher
-          # guard pygame_sdl2 import in rapt so installsdk can run without it
-          python - SDK/rapt/android.py <<'PY'
-          import sys,re
-          p=sys.argv[1]; c=open(p).read()
-          c=re.sub(r'(?m)^(\s*)import pygame_sdl2\s*$',
-                   r'\1try: import pygame_sdl2\n\1except Exception: pass', c)
-          open(p,'w').write(c); print("guarded pygame_sdl2 in rapt/android.py")
-          PY
-      - name: Inspect SDK layout (facts)
+      - name: Facts about embedded python
         run: |
           cd SDK
-          echo "=== python ver ==="; python3 --version
-          echo "=== ls lib ==="; ls -la lib 2>/dev/null
-          echo "=== find pygame_sdl2 (any) ==="; find . -name 'pygame_sdl2*' | head -40
-          echo "=== find python bins in lib ==="; find lib -name 'python*' -type f | head -40
-          echo "=== lib tree 3 levels ==="; find lib -maxdepth 3 | head -120
+          echo "=== ls lib/py3-linux-x86_64 ==="; ls -la lib/py3-linux-x86_64 | head -60
+          echo "=== pygame_sdl2 in linux dir ==="; find lib/py3-linux-x86_64 -name 'pygame_sdl2*' | head
+          echo "=== head android.py ==="; sed -n '1,20p' rapt/android.py
+          echo "=== renpy.sh ==="; cat renpy.sh
           true
-      - name: rapt installsdk
+      - name: rapt installsdk (embedded python)
         run: |
           cd SDK
-          yes | python3 rapt/android.py installsdk || python3 rapt/android.py installsdk
+          chmod +x lib/py3-linux-x86_64/python 2>/dev/null || true
+          export LD_LIBRARY_PATH="$PWD/lib/py3-linux-x86_64"
+          export PYTHONPATH="$PWD:$PWD/lib/py3-linux-x86_64:$PWD/lib/python3.12"
+          PY=lib/py3-linux-x86_64/python
+          yes | $PY rapt/android.py installsdk || $PY rapt/android.py installsdk
       - name: Build launcher DEBUG apk
         run: |
           cd SDK
-          python3 rapt/android.py build launcher debug
+          export LD_LIBRARY_PATH="$PWD/lib/py3-linux-x86_64"
+          export PYTHONPATH="$PWD:$PWD/lib/py3-linux-x86_64:$PWD/lib/python3.12"
+          lib/py3-linux-x86_64/python rapt/android.py build launcher debug
       - name: Collect apk
         run: |
           cd SDK && mkdir -p out
