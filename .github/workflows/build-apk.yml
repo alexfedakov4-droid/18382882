@@ -26,7 +26,7 @@ jobs:
           tar xf sdk.tar.bz2 && mv "$TOP" SDK && ls SDK
       - name: Ensure rapt
         run: |
-          [ -d SDK/rapt ] || git clone --depth1 https://github.com/renpy/rapt.git SDK/rapt
+          [ -d SDK/rapt ] || git clone --depth 1 https://github.com/renpy/rapt.git SDK/rapt
           ls SDK/rapt | head
       - name: Inject android.json + patches
         run: |
